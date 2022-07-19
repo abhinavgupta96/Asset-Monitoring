@@ -1,1 +1,2 @@
 # Asset-Monitoring
+This solution was designed to track and monitor availability of different static objects deployed into a production site. This solution helped increase the availability and uptime of the site while also reducing cost of outages.

@@ -1,0 +1,50 @@
+#!groovy
+
+pipeline {
+  triggers {
+    cron('45 8,10,12,14,16,18 * * 1-5')
+    
+  }
+  agent  {
+    label "base"
+  }
+  
+  options {
+    buildDiscarder(logRotator(numToKeepStr: '5'))
+    timeout(time: 30, unit: 'MINUTES')
+    disableConcurrentBuilds()
+  }
+   environment {
+        BITBUCKET_COMMON_CREDS = credentials('<credentials_token>')
+    }
+  stages {
+     stage('Get the code')
+     {
+         steps{
+             deleteDir()
+             checkout scm
+         }
+     }
+     stage('Run my test') {
+      environment {
+        k8scontext = "stg-eu-west"
+      }
+       steps {
+           
+           script {
+               withEnv(["HOME=${env.WORKSPACE}"]) {
+                   docker.image('python:3.9.5-alpine3.13').inside('-u root') {
+                      sh 'apk update && apk upgrade && apk add git'
+                      sh 'git config --global user.email "$<Bitbucket email>"'
+                      sh 'git config --global user.name "$<Bitbucket username>"'
+                      sh 'python3 -m pip install --user --upgrade pip setuptools wheel'
+                      sh 'python3 -m pip install --user -r requirements.txt'
+                      sh 'USER=$BITBUCKET_COMMON_CREDS_USR TOKEN=$BITBUCKET_COMMON_CREDS_PSW python3 fetch_assets.py'
+                    }
+               }
+
+           }
+      }    
+     }
+}
+}
